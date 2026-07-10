@@ -46,9 +46,22 @@ jobs:
           TAG: ${{ steps.rel.outputs.tag }}
         run: |
           set -euo pipefail
+          # The release is created before its binaries finish attaching, so a
+          # run landing in that window sees 404s. Wait a little, then skip
+          # cleanly; the release pipeline re-dispatches us when assets exist.
+          fetch() {
+            for attempt in 1 2 3 4 5; do
+              curl -fsSL -o "$1" \
+                "https://github.com/somoore/hellbox/releases/download/${TAG}/$1" && return 0
+              echo "$1 not downloadable yet (attempt $attempt/5)"; sleep 30
+            done
+            return 1
+          }
           for asset in hellbox-macos-arm64 hellbox-macos-x86_64 hellbox-linux-arm64 hellbox-linux-x86_64; do
-            curl -fsSL -o "$asset" \
-              "https://github.com/somoore/hellbox/releases/download/${TAG}/${asset}"
+            if ! fetch "$asset"; then
+              echo "release ${TAG} has no ${asset} yet — assets still publishing, skipping this run"
+              exit 0
+            fi
             # SECURITY: the formula's sha256 pins whatever we hash here, so verify
             # build provenance FIRST — a swapped asset must fail loudly, not get pinned.
             gh attestation verify "$asset" --repo somoore/hellbox \
