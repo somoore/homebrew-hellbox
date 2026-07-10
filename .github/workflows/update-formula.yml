@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: update-formula
@@ -136,13 +137,25 @@ jobs:
           end
           EOF
 
-      - name: Commit and push
+      - name: Open a PR with the updated formula
         if: steps.rel.outputs.changed == 'true'
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.rel.outputs.version }}
         run: |
+          # main is protected (admin-enforced, PR required), so the bot cannot
+          # push directly. It opens a PR for the maintainer to review and merge.
+          branch="tap-bump-${VERSION}"
           git config user.name "hellbox-tap-bot"
           git config user.email "actions@github.com"
+          git checkout -b "$branch"
           git add Formula/hellbox.rb
           git commit -m "hellbox ${VERSION} (attestation-verified)"
-          git push
+          git push --force origin "$branch"
+          if gh pr list --head "$branch" --state open --json number --jq '.[0].number' | grep -q .; then
+            echo "PR already open for $branch"
+          else
+            gh pr create --base main --head "$branch" \
+              --title "hellbox ${VERSION} (attestation-verified)" \
+              --body "Automated formula bump to ${VERSION}. SHA256s pinned after verifying each binary's build-provenance attestation against the hellbox release workflow. Review and merge to publish."
+          fi
