@@ -7,28 +7,28 @@
 class Hellbox < Formula
   desc "Run native DOOM inside an AWS Lambda MicroVM, streamed to a browser tab"
   homepage "https://github.com/somoore/hellbox"
-  version "1.0.4"
+  version "1.0.5"
   license "Apache-2.0"
 
   on_macos do
     on_arm do
-      url "https://github.com/somoore/hellbox/releases/download/v1.0.4/hellbox-macos-arm64"
-      sha256 "b4a7753d1c52dac5e33096316e1c7792240fa0a11419dbce855096f1f06c393a"
+      url "https://github.com/somoore/hellbox/releases/download/v1.0.5/hellbox-macos-arm64"
+      sha256 "6faaefbf580725af647241150a4662f1dbc1bc7c053655058fc73687d2e62fb6"
     end
     on_intel do
-      url "https://github.com/somoore/hellbox/releases/download/v1.0.4/hellbox-macos-x86_64"
-      sha256 "e3bceb092bd5f929bf14f33c0b5fd5d8c798048b5f5a061ad3069abc296b6a3a"
+      url "https://github.com/somoore/hellbox/releases/download/v1.0.5/hellbox-macos-x86_64"
+      sha256 "c1b24a7056ed120741ae6af78508a005d1817e0f0b200bfaabc728e87a7525ab"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/somoore/hellbox/releases/download/v1.0.4/hellbox-linux-arm64"
-      sha256 "80661d4cad4a9558c0177fc1446546a4a625527aeabe82bfe195bf2ecece3f63"
+      url "https://github.com/somoore/hellbox/releases/download/v1.0.5/hellbox-linux-arm64"
+      sha256 "0e513e3446e7a376f001b5962164d069d8e0cca04366a079f3646a4113d962c0"
     end
     on_intel do
-      url "https://github.com/somoore/hellbox/releases/download/v1.0.4/hellbox-linux-x86_64"
-      sha256 "2bb241578bd3d01ca308bb11fd444e359aba455a74141de1a29c90354186208e"
+      url "https://github.com/somoore/hellbox/releases/download/v1.0.5/hellbox-linux-x86_64"
+      sha256 "bc08024bf0f61b7c419b7788a663836d40ea397b95a931c815cee6b443d0a791"
     end
   end
 
@@ -37,12 +37,12 @@ class Hellbox < Formula
   end
 
   def caveats
-    <<~EOS
+    <<~CAVEATS
       hellbox drives AWS resources and builds its MicroVM image from the
       Hellbox repo's capsule/ directory:
         git clone https://github.com/somoore/hellbox
         cd hellbox && ./deploy.sh   # uses this brew-installed binary
-    EOS
+    CAVEATS
   end
 
   test do
