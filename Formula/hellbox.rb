@@ -7,28 +7,28 @@
 class Hellbox < Formula
   desc "Run native DOOM inside an AWS Lambda MicroVM, streamed to a browser tab"
   homepage "https://github.com/somoore/hellbox"
-  version "1.0.22"
+  version "1.0.23"
   license "Apache-2.0"
 
   on_macos do
     on_arm do
-      url "https://github.com/somoore/hellbox/releases/download/v1.0.22/hellbox-macos-arm64"
-      sha256 "18d7ea8e574d595eed2dd15b6a4de92f66d8c8b53af62dc7c106b6d5c9024976"
+      url "https://github.com/somoore/hellbox/releases/download/v1.0.23/hellbox-macos-arm64"
+      sha256 "1831af8bc260b9e76273ad9be47b88e1ee5179246d0e760f8fa2c4eebd345df3"
     end
     on_intel do
-      url "https://github.com/somoore/hellbox/releases/download/v1.0.22/hellbox-macos-x86_64"
-      sha256 "4d61e75b71d3f24aac4ee3522919cd90ee67ac1f68020a34350ae08d33ef33e0"
+      url "https://github.com/somoore/hellbox/releases/download/v1.0.23/hellbox-macos-x86_64"
+      sha256 "cd59244d3a761343d565af874cfc352ad3e2b533ec40b2f6e7f83a93fb0f50b3"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/somoore/hellbox/releases/download/v1.0.22/hellbox-linux-arm64"
-      sha256 "89695f9d95e7332752a3a5277f2183a68ec5f671f4a832c5565075992daa8dfb"
+      url "https://github.com/somoore/hellbox/releases/download/v1.0.23/hellbox-linux-arm64"
+      sha256 "29b122022aff65870e1ef167a8f13bae6e22144c6d9daf2d655c8e43e194ea36"
     end
     on_intel do
-      url "https://github.com/somoore/hellbox/releases/download/v1.0.22/hellbox-linux-x86_64"
-      sha256 "1e957e5b6d7f6ba08968595da78f9e9544760665ed15b3039db3177f2f4c3912"
+      url "https://github.com/somoore/hellbox/releases/download/v1.0.23/hellbox-linux-x86_64"
+      sha256 "914e5e6e3c1b2d0a9e9d8f1eaf3e1e6affc6a54ec880d6d48aa429813afc670d"
     end
   end
 
