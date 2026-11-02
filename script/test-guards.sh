@@ -108,6 +108,15 @@ expect "url from another release is rejected" 1 "$validator" \
 expect "injected ruby interpolation is rejected" 1 "$validator" \
   "$(fixture injected-version "s|version \"${ver_re}\"|version \"${cur_version}#{\`id\`}\"|")"
 
+expect "url with a trailing comment is rejected" 1 "$validator" \
+  "$(fixture url-comment "s|download/v${ver_re}/hellbox-macos-arm64\"|download/v0.0.0/hellbox-macos-arm64\" # stale release|")"
+
+expect "url with keyword arguments is rejected" 1 "$validator" \
+  "$(fixture url-kwargs "s|/hellbox-macos-arm64\"|/hellbox-macos-arm64\", using: :nounzip|")"
+
+expect "single-quoted sha256 is rejected" 1 "$validator" \
+  "$(fixture sha-single-quote "s|sha256 \"${first_sha}\"|sha256 '${first_sha}'|")"
+
 expect "broken ruby is rejected" 1 "$validator" \
   "$(fixture broken-ruby 's|class Hellbox < Formula|class Hellbox < Formula do|')"
 

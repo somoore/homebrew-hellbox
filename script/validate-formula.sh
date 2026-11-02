@@ -26,19 +26,17 @@ if ! ruby -c "$formula" >/dev/null; then
   err "ruby -c failed"
 fi
 
-# 2. Checksums: four present, all well formed, none disabled.
-sha_lines=$(grep -cE '^[[:space:]]*sha256 "' "$formula" || true)
-[[ $sha_lines -eq 4 ]] || err "expected 4 sha256 \"...\" lines, found ${sha_lines}"
+# 2. Checksums: four present, all well formed, none disabled. Every sha256
+#    declaration counts, whatever its quoting or trailing text, and each must be
+#    the bare form so none can slip past the format check.
+sha_lines=$(grep -cE '^[[:space:]]*sha256([[:space:](]|$)' "$formula" || true)
+[[ $sha_lines -eq 4 ]] || err "expected 4 sha256 lines, found ${sha_lines}"
 
 while IFS= read -r line; do
-  case $line in
-    *'sha256 "'*) ;;
-    *) continue ;;
-  esac
   if ! printf '%s\n' "$line" | grep -qE '^[[:space:]]*sha256 "[0-9a-f]{64}"$'; then
     err "sha256 must be exactly 64 lowercase hex characters: ${line}"
   fi
-done < "$formula"
+done < <(grep -E '^[[:space:]]*sha256([[:space:](]|$)' "$formula" || true)
 
 if grep -qE '^[[:space:]]*sha256[[:space:]]+:no_check' "$formula"; then
   err ":no_check disables checksum verification"
@@ -56,15 +54,23 @@ if [[ -n $version ]]; then
     err "version is not a plain release version: '${version}'"
   fi
 
-  url_count=$(grep -cE '^[[:space:]]*url "' "$formula" || true)
+  # Count every url declaration and require each to be a bare quoted string:
+  # a trailing comment or keyword argument would otherwise be counted but
+  # skipped by the extraction below, leaving its release unchecked.
+  url_count=$(grep -cE '^[[:space:]]*url([[:space:](]|$)' "$formula" || true)
   [[ $url_count -eq 4 ]] || err "expected 4 url lines, found ${url_count}"
 
-  while IFS= read -r url; do
+  while IFS= read -r line; do
+    if ! printf '%s\n' "$line" | grep -qE '^[[:space:]]*url "[^"]*"$'; then
+      err "url must be a bare quoted string with nothing after it: ${line}"
+      continue
+    fi
+    url=$(printf '%s\n' "$line" | sed 's/^[[:space:]]*url "\(.*\)"$/\1/')
     case $url in
       "https://github.com/somoore/hellbox/releases/download/v${version}/"*) ;;
       *) err "url does not point at release v${version}: ${url}" ;;
     esac
-  done < <(sed -n 's/^[[:space:]]*url "\(.*\)"$/\1/p' "$formula")
+  done < <(grep -E '^[[:space:]]*url([[:space:](]|$)' "$formula" || true)
 fi
 
 if [[ $fail -ne 0 ]]; then
