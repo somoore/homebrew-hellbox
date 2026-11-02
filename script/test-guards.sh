@@ -50,6 +50,19 @@ fixture() { # name sed-expression
   echo "${tmp}/$1.rb"
 }
 
+# The fixtures mutate the live formula, so read the values they substitute
+# from it rather than pinning a release: a formula bump must not turn the
+# negative tests into no-ops that then fail.
+cur_version=$(sed -n 's/^[[:space:]]*version "\(.*\)"$/\1/p' "$formula" | head -n 1)
+first_sha=$(sed -n 's/^[[:space:]]*sha256 "\([0-9a-f]*\)"$/\1/p' "$formula" | head -n 1)
+last_sha=$(sed -n 's/^[[:space:]]*sha256 "\([0-9a-f]*\)"$/\1/p' "$formula" | tail -n 1)
+if [[ -z $cur_version || -z $first_sha || -z $last_sha ]]; then
+  echo "FAIL: could not read version and sha256 pins from ${formula}"
+  exit 1
+fi
+# A dot in the version is a sed metacharacter; escape it for the patterns.
+ver_re=${cur_version//./\\.}
+
 echo "== release tag / sha256 guard"
 expect_output "current tag is accepted" "1.0.27" "$checker" tag "v1.0.27"
 expect_output "pre-release tag is accepted" "1.0.0-rc.1" "$checker" tag "v1.0.0-rc.1"
@@ -77,23 +90,23 @@ echo "== generated formula validator"
 expect "committed formula passes" 0 "$validator" "$formula"
 
 expect "empty sha256 is rejected" 1 "$validator" \
-  "$(fixture empty-hash 's|sha256 "aa46c31b9f731fe1b92ee7c4988d1d4f291a0f5b6b4134bf9a8f868f15e94e3e"|sha256 ""|')"
+  "$(fixture empty-hash "s|sha256 \"${first_sha}\"|sha256 \"\"|")"
 
 expect ":no_check is rejected" 1 "$validator" \
-  "$(fixture no-check 's|sha256 "aa46c31b9f731fe1b92ee7c4988d1d4f291a0f5b6b4134bf9a8f868f15e94e3e"|sha256 :no_check|')"
+  "$(fixture no-check "s|sha256 \"${first_sha}\"|sha256 :no_check|")"
 
 expect "missing fourth sha256 is rejected" 1 "$validator" \
-  "$(fixture three-of-four '/sha256 "c62c3a70/d')"
+  "$(fixture three-of-four "/sha256 \"${last_sha}\"/d")"
 
 expect "version/url mismatch is rejected" 1 "$validator" \
-  "$(fixture version-mismatch 's|version "1.0.27"|version "1.0.28"|')"
+  "$(fixture version-mismatch "s|version \"${ver_re}\"|version \"${cur_version}.1\"|")"
 
 expect "url from another release is rejected" 1 "$validator" \
-  "$(fixture url-mismatch 's|download/v1.0.27/hellbox-macos-arm64|download/v1.0.26/hellbox-macos-arm64|')"
+  "$(fixture url-mismatch "s|download/v${ver_re}/hellbox-macos-arm64|download/v0.0.0/hellbox-macos-arm64|")"
 
 # shellcheck disable=SC2016
 expect "injected ruby interpolation is rejected" 1 "$validator" \
-  "$(fixture injected-version 's|version "1.0.27"|version "1.0.27#{`id`}"|')"
+  "$(fixture injected-version "s|version \"${ver_re}\"|version \"${cur_version}#{\`id\`}\"|")"
 
 expect "broken ruby is rejected" 1 "$validator" \
   "$(fixture broken-ruby 's|class Hellbox < Formula|class Hellbox < Formula do|')"
