@@ -28,9 +28,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           TAG=$(gh release view --repo somoore/hellbox --json tagName --jq .tagName)
-          VERSION="${TAG#v}"
-          CURRENT=$(sed -n 's/^  version "\(.*\)"/\1/p' Formula/hellbox.rb)
+          # SECURITY: TAG and VERSION are interpolated into the generated Ruby
+          # (url/version) and a git ref may legally contain " # { } ` ; $ ( ).
+          # Reject anything that is not a plain release tag before it is used.
+          # This also fails loudly on an empty tag instead of writing version "".
+          VERSION=$(script/check-release-inputs.sh tag "$TAG")
+          CURRENT=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' Formula/hellbox.rb)
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           if [ "$VERSION" = "$CURRENT" ]; then
@@ -60,7 +65,10 @@ jobs:
           }
           for asset in hellbox-macos-arm64 hellbox-macos-x86_64 hellbox-linux-arm64 hellbox-linux-x86_64; do
             if ! fetch "$asset"; then
+              # SECURITY: exiting 0 here must not let the later steps run. Mark
+              # the run as skipped so no formula is generated from partial sums.
               echo "release ${TAG} has no ${asset} yet — assets still publishing, skipping this run"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             # SECURITY: the formula's sha256 pins whatever we hash here, so verify
@@ -72,7 +80,7 @@ jobs:
           done
 
       - name: Regenerate formula
-        if: steps.rel.outputs.changed == 'true'
+        if: steps.rel.outputs.changed == 'true' && steps.sums.outputs.skip != 'true'
         env:
           TAG: ${{ steps.rel.outputs.tag }}
           VERSION: ${{ steps.rel.outputs.version }}
@@ -82,6 +90,14 @@ jobs:
           SHA_LIN_X64: ${{ steps.sums.outputs.hellbox-linux-x86_64 }}
         run: |
           set -euo pipefail
+          # SECURITY: never write the template from empty or malformed inputs.
+          # A missing tag/version or a single short hash fails here, so a
+          # half-published release cannot produce a `sha256 ""` PR.
+          : "${TAG:?missing release tag}"
+          : "${VERSION:?missing release version}"
+          script/check-release-inputs.sh tag "$TAG" >/dev/null
+          script/check-release-inputs.sh sha256 \
+            "$SHA_MAC_ARM" "$SHA_MAC_X64" "$SHA_LIN_ARM" "$SHA_LIN_X64"
           base="https://github.com/somoore/hellbox/releases/download/${TAG}"
           cat > Formula/hellbox.rb <<EOF
           # typed: false
@@ -138,7 +154,7 @@ jobs:
           EOF
 
       - name: Open a PR with the updated formula
-        if: steps.rel.outputs.changed == 'true'
+        if: steps.rel.outputs.changed == 'true' && steps.sums.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.rel.outputs.version }}
