@@ -1,0 +1,30 @@
+name: validate
+
+# Gate every change to the tap, including the unattended formula bumps.
+# SECURITY: the updater writes Formula/hellbox.rb without review, so this job
+# proves the artifact is valid Ruby with four real SHA256 pins and a version
+# that matches every download URL before a PR can be merged.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  formula:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Test the guards
+        run: script/test-guards.sh
+
+      - name: Validate the generated formula
+        run: script/validate-formula.sh Formula/hellbox.rb
